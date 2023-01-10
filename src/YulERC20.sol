@@ -8,8 +8,20 @@ contract YulERC20 {
 
     uint256 internal _totalSupply;
 
-    bytes TransferEventSigHash = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-    bytes ApprovalEventSigHash = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+    bytes constant TransferEventSigHash = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    bytes constant ApprovalEventSigHash = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+
+    constructor() {
+        assembly {
+            let _caller := caller()
+            mstore(0x00, _caller)
+            mstore(0x20, 0x00)
+            let callerBalSlot := keccak256(0x00, 0x40)
+
+            sstore(0x02, 0x3bd913e6c1df40000)
+            sstore(callerBalSlot, 0x3bd913e6c1df40000)
+        }
+    }
 
     function name() public pure returns (string memory) {
         assembly {
@@ -36,20 +48,78 @@ contract YulERC20 {
 
     function totalSupply() public view returns (uint256) {
         assembly {
-            
+            let freeMemPtr := mload(0x40)
+            let _totSup := sload(0x02)
+            mstore(freeMemPtr, _totSup)
+            return(freeMemPtr, 0x20)
         }
     }
 
-    function balanceOf(address _owner) public view returns (uint256) {}
+    function balanceOf(address) public view returns (uint256) {
+        assembly {
+            let freeMemPtr := mload(0x40)
+            let _owner := calldataload(0x04)
+            mstore(freeMemPtr, _owner)
+            mstore(add(freeMemPtr, 0x20), 0x00)
+            
+            let ownerSlot := keccak256(freeMemPtr, 0x40)
+            let ownerBal := sload(ownerSlot)
+
+            mstore(freeMemPtr, ownerBal)
+            return(freeMemPtr, 0x20)
+        }    
+    }
+    
+    function allowance(address, address) public view returns (uint256) {
+        assembly {
+            let freeMemPtr := mload(0x40)
+            
+            let _owner := calldataload(0x04)
+            let _spender := calldataload(0x24)
+            
+            mstore(freeMemPtr, _owner)
+            mstore(add(freeMemPtr, 0x20), 0x01)
+            let intermediateSlot := keccak256(freeMemPtr, 0x40)
+
+            mstore(freeMemPtr, _spender)
+            mstore(add(freeMemPtr, 0x20), intermediateSlot)
+            let allowanceSlot := keccak256(freeMemPtr, 0x40)
+            let _allowance := sload(allowanceSlot)
+
+            mstore(freeMemPtr, _allowance)
+            return(freeMemPtr, 0x20)
+        }
+        
+    }
 
     function transfer(address _to, uint256 _value) public returns (bool) {}
 
     function transferFrom(address _from, address _to, uint256 value) public returns (bool) {}
 
-    function approve(address _spender, uint256 _value) public returns (bool) {}
+    function approve(address, uint256) public returns (bool) {
+        assembly {
+            let freeMemPtr := mload(0x40)
+        
+            let _caller := caller()
+            let _spender := calldataload(0x04)
+            let _value := calldataload(0x24)
 
-    function allowance(address _owner, address _spender) public view returns (uint256) {
+            mstore(freeMemPtr, _caller)
+            mstore(add(freeMemPtr, 0x20), 0x01)
+            let intermediateSlot := keccak256(freeMemPtr, 0x40)
 
+            mstore(freeMemPtr, _spender)
+            mstore(add(freeMemPtr, 0x20), intermediateSlot)
+            let targetSlot := keccak256(freeMemPtr, 0x40)
+
+            sstore(targetSlot, _value)
+
+            mstore(freeMemPtr, _value)
+            log3(freeMemPtr, 0x20, 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925, _caller, _spender)
+
+            mstore(freeMemPtr, 0x01) // found a bug in foundry? mstore(freeMemPtr, 0x69) returns false :(
+            return(freeMemPtr, 0x20)
+        }
     }
 
 }
