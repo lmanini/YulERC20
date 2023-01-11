@@ -127,8 +127,49 @@ contract YulERC20 {
         }
     }
 
-    function transferFrom(address _from, address _to, uint256 value) public returns (bool) {
+    function transferFrom(address, address, uint256) public returns (bool) {
+        assembly {
+            let freeMemPtr := mload(0x40)
+
+            let _caller := caller()
+            let _from := calldataload(0x04)
+            let _to := calldataload(0x24)
+            let _value := calldataload(0x44)
+
+            // check if caller has enough allowance to spend _from's tokens
+            mstore(freeMemPtr, _from)
+            mstore(add(freeMemPtr, 0x20), 0x01)
+            let intermediateSlot := keccak256(freeMemPtr, 0x40)
+
+            mstore(freeMemPtr, _caller)
+            mstore(add(freeMemPtr, 0x20), intermediateSlot)
+            let fromAllowanceSlot := keccak256(freeMemPtr, 0x40)
+            let fromAllowance := sload(fromAllowanceSlot)
+
+            if lt(fromAllowance, _value) {
+                // revert if not
+                mstore(0x00, 0x20)
+                mstore(0x36, 0x16496e73756666696369656e7420616c6c6f77616e6365)
+                revert(0x00, 0x60)
+            }
+
+            // check if _from has enough balance
+                // revert if not
+            
+            // subtract _value from _from's balance
+
+            // add _value to _to's balance
+
+            // check if allowances[_from][msg.sender] != type(uint256).max
+                // subtract _value from allowances[_from][msg.sender] if so
         
+            // log transfer
+
+            //return true
+            mstore(freeMemPtr, 0x01)
+            return(freeMemPtr, 0x20)
+
+        }
     }
 
     function approve(address, uint256) public returns (bool) {
