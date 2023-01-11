@@ -18,8 +18,8 @@ contract YulERC20 {
             mstore(0x20, 0x00)
             let callerBalSlot := keccak256(0x00, 0x40)
 
-            sstore(0x02, 0x3bd913e6c1df40000)
-            sstore(callerBalSlot, 0x3bd913e6c1df40000)
+            sstore(0x02, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            sstore(callerBalSlot, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
         }
     }
 
@@ -89,12 +89,47 @@ contract YulERC20 {
             mstore(freeMemPtr, _allowance)
             return(freeMemPtr, 0x20)
         }
-        
     }
 
-    function transfer(address _to, uint256 _value) public returns (bool) {}
+    function transfer(address, uint256) public returns (bool) {
+        assembly {
+            let freeMemPtr := mload(0x40)
 
-    function transferFrom(address _from, address _to, uint256 value) public returns (bool) {}
+            let _from := caller()
+            let _to := calldataload(0x04)
+            let _value := calldataload(0x24)
+
+            mstore(freeMemPtr, _from)
+            mstore(add(freeMemPtr, 0x20), 0x00)
+            let fromBalanceSlot := keccak256(freeMemPtr, 0x40)
+            let fromBalance := sload(fromBalanceSlot)
+
+            if lt(fromBalance, _value) {
+                mstore(0x00, 0x20)
+                mstore(0x34, 0x14496e73756666696369656e742062616c616e6365) // revert with "Insufficient balance" msg
+                revert(0x00, 0x60)
+            }
+
+            sstore(fromBalanceSlot, sub(fromBalance, _value))
+
+            mstore(freeMemPtr, _to)
+            mstore(add(freeMemPtr, 0x20), 0x00)
+            let toBalanceSlot := keccak256(freeMemPtr, 0x40)
+            let toBalance := sload(toBalanceSlot)
+
+            sstore(toBalanceSlot, add(toBalance, _value))
+
+            mstore(freeMemPtr, _value)
+            log3(freeMemPtr, 0x20, 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, _from, _to)
+
+            mstore(freeMemPtr, 0x01)
+            return(freeMemPtr, 0x20)
+        }
+    }
+
+    function transferFrom(address _from, address _to, uint256 value) public returns (bool) {
+        
+    }
 
     function approve(address, uint256) public returns (bool) {
         assembly {
@@ -117,7 +152,7 @@ contract YulERC20 {
             mstore(freeMemPtr, _value)
             log3(freeMemPtr, 0x20, 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925, _caller, _spender)
 
-            mstore(freeMemPtr, 0x01) // found a bug in foundry? mstore(freeMemPtr, 0x69) returns false :(
+            mstore(freeMemPtr, 0x01)
             return(freeMemPtr, 0x20)
         }
     }

@@ -9,6 +9,7 @@ contract YulERC20Test is Test {
 
     function setUp() external {
         token = new YulERC20();
+        vm.label(address(token), "YulToken");
     }
 
     function testName() external {
@@ -28,12 +29,12 @@ contract YulERC20Test is Test {
 
     function testTotalSupply() external {
         uint256 totalSupply = token.totalSupply();
-        assertEq(totalSupply, 69 ether);
+        assertEq(totalSupply, type(uint256).max);
     }
 
     function testBalanceOf() external {
         uint256 myBal = token.balanceOf(address(this));
-        assertEq(myBal, 69 ether);
+        assertEq(myBal, type(uint256).max);
     }
 
     function testApprove() external {
@@ -42,6 +43,21 @@ contract YulERC20Test is Test {
         
         uint256 allowance = token.allowance(address(this), address(0xdead));
         assertEq(allowance, 69 ether);
+    }
+
+    function testTransfer() external {
+        address A = address(uint160(uint256(keccak256(abi.encode("a")))));
+        vm.label(A, "a");
+
+        address B = address(uint160(uint256(keccak256(abi.encode("b")))));
+        vm.label(B, "b");
+
+        bool resA = token.transfer(A, 1 wei);
+        assertTrue(resA);
+
+        vm.expectRevert();
+        bool resB = token.transfer(B, type(uint256).max);
+        assertFalse(resB);
     }
 
 }
