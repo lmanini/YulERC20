@@ -168,7 +168,6 @@ contract YulERC20 {
             //return true
             mstore(freeMemPtr, 0x01)
             return(freeMemPtr, 0x20)
-
         }
     }
 
