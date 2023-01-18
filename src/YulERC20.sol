@@ -149,21 +149,43 @@ contract YulERC20 {
             if lt(fromAllowance, _value) {
                 // revert if not
                 mstore(0x00, 0x20)
-                mstore(0x36, 0x16496e73756666696369656e7420616c6c6f77616e6365)
+                mstore(0x36, 0x16496e73756666696369656e7420616c6c6f77616e6365) // revert with "Insufficient allowance" msg
                 revert(0x00, 0x60)
             }
 
             // check if _from has enough balance
+            mstore(freeMemPtr, _from)
+            mstore(add(freeMemPtr, 0x20), 0x00)
+            let fromBalanceSlot := keccak256(freeMemPtr, 0x40)
+            let fromBalance := sload(fromBalanceSlot)
+
+            if lt(fromBalance, _value) {
                 // revert if not
+                mstore(0x00, 0x20)
+                mstore(0x34, 0x14496e73756666696369656e742062616c616e6365) // revert with "Insufficient balance" msg
+                revert(0x00, 0x60)
+            }
             
             // subtract _value from _from's balance
+            sstore(fromBalanceSlot, sub(fromBalance, _value))
 
             // add _value to _to's balance
+            mstore(freeMemPtr, _to)
+            mstore(add(freeMemPtr, 0x20), 0x00)
+            let toBalanceSlot := keccak256(freeMemPtr, 0x40)
+            let toBalance := sload(toBalanceSlot)
+
+            sstore(toBalanceSlot, add(toBalance, _value))
 
             // check if allowances[_from][msg.sender] != type(uint256).max
+            if iszero(eq(fromAllowance, 0xffffffffffffffffffffffffffffffff)) {
                 // subtract _value from allowances[_from][msg.sender] if so
+                sstore(fromAllowanceSlot, sub(fromAllowance, _value))
+            }
         
             // log transfer
+            mstore(freeMemPtr, _value)
+            log3(freeMemPtr, 0x20, 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, _from, _to)
 
             //return true
             mstore(freeMemPtr, 0x01)
@@ -196,5 +218,4 @@ contract YulERC20 {
             return(freeMemPtr, 0x20)
         }
     }
-
 }
