@@ -11,14 +11,11 @@ contract YulERC20Test is Test {
     address B;
 
     function setUp() external {
-        deployer = address(uint160(uint256(keccak256(abi.encode("deployer")))));
-        vm.label(deployer, "deployer"); 
+        deployer = makeAddr("deployer");
         
-        A = address(uint160(uint256(keccak256(abi.encode("a")))));
-        vm.label(A, "a");
+        A = makeAddr("A");
 
-        B = address(uint160(uint256(keccak256(abi.encode("b")))));
-        vm.label(B, "b");
+        B = makeAddr("B");
 
         vm.prank(deployer);
         token = new YulERC20();
